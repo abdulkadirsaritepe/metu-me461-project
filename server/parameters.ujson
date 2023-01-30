@@ -1,0 +1,30 @@
+
+{
+    "groupInfo": {
+        "group": "mamba",
+        "id": 11
+    },
+    "speedInfo": {
+        "speed": "L",
+        "H": 100,
+        "M": 60,
+        "L": 35,
+        "speedMultiplier":650
+    },
+    "mqttInfo": {
+        "host":"192.168.246.91",
+        "port":1883,
+        "client_id":"ubuntu2004-",
+        "username":"ubuntu2004",
+        "password":"abdulkadir",
+        "servertopic":"server",
+        "picotopic":"pico"
+    },
+    "servermqttInfo": {
+        "host":"144.122.143.29",
+        "client_id":"mamba",
+        "username":"mamba",
+        "password":"ahmetBUGRA",
+        "topics": ["arena","config","tick","start","stats"]
+    }
+}

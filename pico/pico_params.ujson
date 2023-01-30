@@ -1,0 +1,43 @@
+
+{
+    "groupInfo": {
+        "group": "mamba",
+        "id": 11
+    },
+    "gameInfo": {
+        "status": "start"
+    },
+    "motorInfo": {
+        "speed": "M",
+        "leftWheelCalibration":1,
+        "rightWheelCalibration":1,
+        "motorfreq": 100,
+        "motor1pins": [14, 15],
+        "motor2pins": [16, 17],
+        "button":21,
+        "buzzer":6
+    },
+    "ledInfo": {
+        "bootLed": 27,
+        "wifiLed": 28,
+        "mqttLed": 1,
+        "startLed": 3,
+        "workingLed": 26,
+        "speedLLed": 8,
+        "speedMLed": 9,
+        "speedHLed": 7,
+        "prey1":12,
+        "prey2":18,
+        "predator1":5,
+        "predator2":22
+    },
+    "mqttInfo": {
+        "host":"3063dc6a5a054d8ba494adae35cb4e11.s2.eu.hivemq.cloud",
+        "port":8883,
+        "client_id":"pico",
+        "username":"picow",
+        "password":"mamba1234",
+        "servertopic":"server",
+        "picotopic":"pico"
+    }
+}
