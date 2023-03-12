@@ -1,6 +1,12 @@
 
 import os, ujson
 
+# info PathFinder Class to find the path
+# info This class is used to find the path from the robot to the target cell
+# info The path is found using the A* algorithm
+# info Every cell has 4 neighbors
+# IMPORTANT IT CAN BE IMPROVED, NOT DONE...
+
 class PathFinder:
     def __init__(self, gridSize, colors): # points ex.: {"B":1, "G":3, "Y":4}
         self.gridSize = gridSize
@@ -9,16 +15,19 @@ class PathFinder:
         self.previousStep = None
 
     def findNeighbors(self, cell):
-        neighbors = []
-        if cell[0]+1 <= self.gridSize[0]-1 and self.colors[cell[0] + 1][cell[1]] == 'W':
-            neighbors.append([cell[0] + 1, cell[1]])
-        if cell[0]-1 >= 0 and self.colors[cell[0] - 1][cell[1]] == 'W':
-            neighbors.append([cell[0] - 1, cell[1]])
-        if cell[1]+1 <= self.gridSize[1]-1 and self.colors[cell[0]][cell[1] + 1] == 'W':
-            neighbors.append([cell[0], cell[1] + 1])
-        if cell[1]-1 >= 0 and self.colors[cell[0]][cell[1] - 1] == 'W':
-            neighbors.append([cell[0], cell[1] - 1])
-        return neighbors
+        try:
+            neighbors = []
+            if cell[0]+1 <= self.gridSize[0]-1 and self.colors[cell[0] + 1][cell[1]] in ['W','G','Y','B']:
+                neighbors.append([cell[0] + 1, cell[1]])
+            if cell[0]-1 >= 0 and self.colors[cell[0] - 1][cell[1]] in ['W', 'G', 'Y', 'B']:
+                neighbors.append([cell[0] - 1, cell[1]])
+            if cell[1]+1 <= self.gridSize[1]-1 and self.colors[cell[0]][cell[1] + 1] in ['W','G','Y','B']:
+                neighbors.append([cell[0], cell[1] + 1])
+            if cell[1]-1 >= 0 and self.colors[cell[0]][cell[1] - 1] in ['W', 'G', 'Y', 'B']:
+                neighbors.append([cell[0], cell[1] - 1])
+            return neighbors
+        except:
+            return []
 
     def findPathRecursive(self, startcell, targetcell, path=[]):
         neighbors = self.findNeighbors(startcell)
@@ -39,15 +48,16 @@ class PathFinder:
         if len(neighbors) == 0:
             dangerZone = path[-1]
             path.pop()
-            self.previousStep = path[-1]
-            neighbors = self.findNeighbors(path[-1])
-            if dangerZone in neighbors:
-                neighbors.remove(dangerZone)
-            if self.previousStep in neighbors:
-                neighbors.remove(self.previousStep) # Prevents going back and forth
-            for neighbor in neighbors:
-                if neighbor in path:
-                    neighbors.remove(neighbor)
+            if len(path) > 0:
+                self.previousStep = path[-1]
+                neighbors = self.findNeighbors(path[-1])
+                if dangerZone in neighbors:
+                    neighbors.remove(dangerZone)
+                if self.previousStep in neighbors:
+                    neighbors.remove(self.previousStep) # Prevents going back and forth
+                for neighbor in neighbors:
+                    if neighbor in path:
+                        neighbors.remove(neighbor)
         else:
             for neighbor in neighbors:
                 if neighbor not in path and targetcell not in neighbors:

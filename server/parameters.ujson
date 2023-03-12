@@ -12,19 +12,21 @@
         "speedMultiplier":650
     },
     "mqttInfo": {
-        "host":"192.168.246.91",
-        "port":1883,
-        "client_id":"ubuntu2004-",
-        "username":"ubuntu2004",
-        "password":"abdulkadir",
+        "host":"",
+        "port":0,
+        "client_id":"",
+        "username":"",
+        "password":"",
         "servertopic":"server",
         "picotopic":"pico"
     },
     "servermqttInfo": {
-        "host":"144.122.143.29",
-        "client_id":"mamba",
-        "username":"mamba",
-        "password":"ahmetBUGRA",
+        "host":"",
+        "client_id":"",
+        "username":"",
+        "password":"",
         "topics": ["arena","config","tick","start","stats"]
-    }
+    },
+    "turnDelay":250,
+    "moveDelay":400
 }

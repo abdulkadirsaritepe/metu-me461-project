@@ -8,13 +8,16 @@ class StatusUpdate:
         self.info = ujson.loads(open(self.param_path).read())
         self.ledInfo = self.info['ledInfo']
         self.leds = {}
+        self.power = 10000
         for led, ledpin in self.ledInfo.items():
-            self.leds.update({led: Pin(ledpin, Pin.OUT)})
-            self.leds[led].value(0)
+            self.leds.update({led: PWM(Pin(ledpin, Pin.OUT))})
+            self.leds[led].duty_u16(0)
 
     def updateLeds(self, led, status):
-        self.leds[led].value(status)
+        status = self.power if str(status) == "1" else 0
+        self.leds[led].duty_u16(status)
 
     def updateAllLeds(self, status):
+        status = self.power if str(status) == "1" else 0
         for led in self.leds:
-            self.leds[led].value(status)
+            self.leds[led].duty_u16(status)

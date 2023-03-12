@@ -2,7 +2,11 @@
 import paho.mqtt.client as mqtt 
 import time, ujson, os
 
-# MQTT Broker for establishing connection and publishing data to the cloud and subscribing to the cloud
+# info MQTT Broker for establishing connection and publishing data to the cloud and subscribing to the cloud
+# info GameBoardMQTT class is used to establish connection to the MQTT Broker and publish and subscribe to the topics
+# info robotSay method is used to send messages to the robot
+# info arenaImageTaken is used to check if the arena image is taken or not
+
 class GameBoardMQTT: 
     def __init__(self):
         self.dir_path = os.path.dirname(os.path.realpath(__file__)) # Get the current directory
@@ -20,23 +24,31 @@ class GameBoardMQTT:
         self.currentRole = None # Current Role of the robot
         self.robotId = None # Robot ID
         self.arenaImageTaken = False # Arena Image Taken Status
+        self.tick = None
+        self.stats = None
+        self.totalpoints = 0
+        self.TIMEOUT = 0
+        self.status = "STOP"
         self.get_params() # Get the parameters
         k = 0 # Counter for the connection attempts
         while self.client == None: 
             try:
                 self.mqtt_connect() # Connect to the MQTT Broker
                 print("Connection Established to the Mechatronics Laboratory MQTT Broker")
+                self.isConnected = True
             except KeyboardInterrupt:
                 print("Keyboard Interrupt")
                 break
             except:
                 # If the connection is not established, try again after 5 seconds
                 print("Failed to connect to the Mechatronics Laboratory MQTT Broker. Reconnecting...")
-                time.sleep(5)
+                time.sleep(3)
                 k+=1 
-            if k == 5:
+                self.isConnected = False
+            if k == 3:
                 # If the connection is not established after 5 attempts, exit the program
                 print("Failed to connect to the Mechatronics Laboratory MQTT Broker. Please check your internet connection.")
+                self.isConnected = False
                 return
 
     def get_params(self): # Get the parameters
@@ -60,11 +72,7 @@ class GameBoardMQTT:
         self.client = client # Set the MQTT Client
 
         try:
-            topicToSubscribe = []
-            for topic in self.topics:
-                topicToSubscribe.append((topic, 0))
-                client.subscribe(topic) # Subscribe to the topics
-            print(topicToSubscribe)
+            client.subscribe("#") # Subscribe to all the topics
         except:
             print("Failed to subscribe to the topics")
 
@@ -76,56 +84,85 @@ class GameBoardMQTT:
             msgTopic = msg.topic
             msgContent = msg.payload
             if msgTopic == "arena":
-                with open(f'{self.dir_path}/arena_view.png', 'wb') as f:
-                    f.write(msgContent)
-                self.arenaImageTaken = True
+                # ? Photo of the Arena captured from the overhead camera
+                try:
+                    with open(f'{self.dir_path}/arena_view.png', 'wb') as f:
+                        f.write(msgContent)
+                    self.arenaImageTaken = True
+                except:
+                    self.arenaImageTaken = False
+                    print("Failed to save the arena image")
             elif msgTopic == "config": # TODO
-                msgContent = eval(msgContent)
-                msgContent = msgContent[self.currentRole]
-                game_info = ujson.loads(open(self.game_info_path).read())
-                for k, v in msgContent.items():
-                    if str(k).strip()[1] == "P":
-                        (game_info["points"]).update({str(k).strip()[0]:v}) # TODO
-                    elif str(k).strip()[1] == "S":
-                        (game_info["speedLimits"]).update({str(k).strip()[0]:v}) # TODO
-                game_info = ujson.dumps(game_info)
-                with open(self.game_info_path, 'w') as f:
-                    f.write(game_info)
-                timeout = float(msgContent["TIMEOUT"]) # TODO
-                updated = self.updateGameInfo("timeout", timeout)
+                # ? {“PREDATOR”:[YV, BV, YS, BS, [ID1, ID2,...]],“PREY”:[YV, BV, YS, BS, [ID1,ID2,...]], “TIMEOUT”:15 }
+                try:
+                    msgContent = eval(msgContent)
+                    preyInfo = msgContent["PREY"]
+                    predatorInfo = msgContent["PREDATOR"]
+                    if self.currentRole == "PREY":
+                        info = preyInfo
+                    elif self.currentRole == "PREDATOR":
+                        info = predatorInfo
+                    game_info = ujson.loads(open(self.game_info_path).read())
+                    game_info[self.currentRole]["points"]["Y"] = info[0]
+                    game_info[self.currentRole]["points"]["B"] = info[1]
+                    game_info[self.currentRole]["speedLimits"]["Y"] = info[2]
+                    game_info[self.currentRole]["speedLimits"]["B"] = info[3]
+                    game_info["TIMEOUT"] = int(msgContent["TIMEOUT"])
+                    self.TIMEOUT = int(msgContent['TIMEOUT'])
+
+                    game_info = ujson.dumps(game_info)
+                    with open(self.game_info_path, 'w') as f:
+                        f.write(game_info)
+                except:
+                    print("Failed to get the config")
             elif msgTopic == "tick":
-                msgContent = int(msgContent)
-                updated = self.updateGameInfo("tick", msgContent)
+                # ? Number of seconds remaining for the game to start, or to end.
+                try:
+                    msgContent = int(msgContent)
+                    self.tick = msgContent
+                except:
+                    print("Failed to get the tick")
             elif msgTopic == "start":
-                msgContent = msgContent.decode("utf-8")
-                if msgContent in ["GO", "STOP", "PAUSE"]:
-                    updated = self.updateGameInfo("start", msgContent)
+                # ? [“GO”, “PAUSE” or “STOP”] Either of the 3 words will be published.
+                try:
+                    msgContent = msgContent.decode("utf-8")
+                    if msgContent in ["START", "STOP", "PAUSE"]:
+                        self.status = msgContent
+                        # self.updateGameInfo("status", msgContent)
+                    else:
+                        print("Unknown start command")
+                except Exception as e:
+                    print("Failed to get the start: ", e)
             elif msgTopic == "stats":
-                msgContent = eval(msgContent)
-                msgContent2 = {}
-                for item in msgContent:
-                    msgContent2.update({int(item['ID']): list(item['POS'])})
-                updated = self.updateGameInfo("stats", msgContent2)
+                # ? [{“ID”:Z_1, “POS”:[[X1_1,Y1_1],[X1_2,Y1_2],[X1_3,Y1_3],[X1_4,Y1_4]]} , … ,{“ID”:Z_i, “POS”:[[Xi_1,Yi_1],[Xi_2,Yi_2],[Xi_3,Yi_3],[Xi_4,Yi_4]]}, … , {...}, {...}]
+                try:
+                    msgContent = eval(msgContent)
+                    msgContent2 = {}
+                    for item in msgContent:
+                        msgContent2.update({int(item['ID']): list(item['POS'])})
+                    self.stats = msgContent2
+                    # self.updateGameInfo("stats", msgContent2)
+                except Exception as e:
+                    print("Failed to get the stats ", e)
             else:
-                print("Unknown topic: ", msgTopic)
-            if updated:
-                print("Updated game info")
-            else:
-                print("Failed to update game info")
+                pass
+                # print("Unknown topic: ", msgTopic)
+
         except Exception as e:
             print(e)
 
     def on_publish(self, client, userdata, mid):
         pass # print(f"Message Published to: {client}") # Print the topic that the message was published to
 
-    def robotSay(self):
+    def robotSay(self, currentcell, targetcell, rTime, speed):
         # special protocol for publishing to the robotSay topic
+        # ? [ID, current_role, speed, total_points, current_cell, remaining time to enable transformer cell]
         if self.client == None: # If the MQTT Client is not initialized or the topic is not motor, return
             return
         game_info = ujson.loads(open(self.game_info_path).read())
-        msg = f"[{game_info['ID']}, '{game_info['role']}', '{game_info['speed']}', {game_info['totalpoints']}, {tuple(game_info['currentcell'])}, {tuple(game_info['destinationcell'])}, {game_info['remainingTime']}]"
+        msg = f"[11, '{game_info['role']}', '{speed}', {self.totalpoints}, {currentcell}, {targetcell}, {rTime}]"
         msg = bytes(msg, 'utf-8') # Convert the message to bytes
-        (result, mid) = self.client.publish(self.servertopic, msg, qos=1) # Publish the message to the topic
+        (result, mid) = self.client.publish("robotsay", msg, qos=1) # Publish the message to the topic
         if result == 0: # If the message is published successfully, print the topic that the message was published to
             pass
             # print("Message Published to: %s" % (self.servertopic)) # Print the topic that the message was published to
@@ -143,6 +180,9 @@ class GameBoardMQTT:
             with open(self.game_info_path, 'w') as f:
                 f.write(game_info)
             return True
+
+    def transformationDuty(self): # TODO - When transformation is possible, perform the function.
+        pass
 
     def mqtt_disconnect(self):
         print("Disconnecting from the MQTT Broker")

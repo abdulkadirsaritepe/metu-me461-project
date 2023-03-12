@@ -12,8 +12,8 @@
         "leftWheelCalibration":1,
         "rightWheelCalibration":1,
         "motorfreq": 100,
-        "motor1pins": [14, 15],
-        "motor2pins": [16, 17],
+        "motor1pins": [15, 14],
+        "motor2pins": [17, 16],
         "button":21,
         "buzzer":6
     },
@@ -32,11 +32,11 @@
         "predator2":22
     },
     "mqttInfo": {
-        "host":"3063dc6a5a054d8ba494adae35cb4e11.s2.eu.hivemq.cloud",
-        "port":8883,
-        "client_id":"pico",
-        "username":"picow",
-        "password":"mamba1234",
+        "host":"",
+        "port":0,
+        "client_id":"-",
+        "username":"",
+        "password":"",
         "servertopic":"server",
         "picotopic":"pico"
     }

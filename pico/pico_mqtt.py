@@ -89,7 +89,7 @@ class PicoMQTT:
         k = 0 # Counter
         while self.client == None and k < 10: # Try to connect to the MQTT Server
             print("Trying to connect to %s MQTT Broker..." % (self.mqtt_server)) # Trying to connect to the MQTT Server
-            self.client = MQTTClient(client_id=bytes(self.client_id, 'utf-8'), server=bytes(self.mqtt_server, 'utf-8'), port=self.port, password=bytes(self.password, 'utf-8'), user=bytes(self.username, 'utf-8'), keepalive=3600, ssl=True, ssl_params={'server_hostname': self.mqtt_server})
+            self.client = MQTTClient(self.client_id, self.mqtt_server, self.port, self.username, self.password)
             utime.sleep(1) # Sleep for 1 second
             k += 1 # Increment the counter
         if self.client == None:
@@ -126,9 +126,9 @@ class PicoMQTT:
             parameterName = (str(msgValue).split(":"))[0] # get the first part of the message
             parameterValue = (str(msgValue).split(":"))[1] # get the second part of the message
             parameterType = (str(msgValue).split(":"))[2] # get the second part of the message
-            self.updateParameters(parameterName, parameterValue, parameterType)
             if parameterName == "speed":
                 self.statusLeds.updateLeds(f"speed{self.speed}Led", 0)
+            self.updateParameters(parameterName, parameterValue, parameterType)
             self.get_params()
             if parameterName == "speed":
                 self.statusLeds.updateLeds(f"speed{self.speed}Led", 1)
@@ -149,6 +149,16 @@ class PicoMQTT:
                 self.statusLeds.updateLeds("workingLed", 0)
             else:
                 self.statusLeds.updateLeds("workingLed", 1)
+        elif msgCode == "22" and not self.paused and not self.stopped: # if the message code is 22, drive motors
+            leftDirection = (str(msgValue).split(":"))[0] # get the first part of the message
+            leftSpeed = (str(msgValue).split(":"))[1] # get the first part of the message
+            rightDirection = (str(msgValue).split(":"))[2] # get the first part of the message
+            rightSpeed = (str(msgValue).split(":"))[3] # get the second part of the message
+            delayTime = (str(msgValue).split(":"))[4] # get the third part of the message
+            leftDirection = -1 if leftDirection == "0" else 1
+            rightDirection = -1 if rightDirection == "0" else 1
+            self.vehicle.drive_step(leftDirection*int(leftSpeed), rightDirection*int(rightSpeed), int(delayTime))
+            
         elif msgCode == "99": # if the message code is 10, update the status of leds
             self.statusLeds.updateAllLeds(0)
             self.quit()
@@ -180,7 +190,7 @@ class PicoMQTT:
         if name == "speed":
             self.speed = value
         info = ujson.dumps(info)
-        with open(self.param_path) as f:
+        with open(self.param_path, "w") as f:
             f.write(info)
     
     def quit(self):
